@@ -13,19 +13,28 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
+    - name: Create Flutter project
+      run: |
+        # Create proper Flutter project structure
+        flutter create --template app --project-name english_assessment --org com.example .
+        
+        # Replace the generated main.dart with our code
+        cp lib/main.dart lib/main.dart.backup || true
+        echo "Flutter project created successfully"
+        
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.13.9'
         
-    - name: Debug - Show files
+    - name: Restore our main.dart
       run: |
-        echo "=== Current directory ==="
-        pwd
-        echo "=== Files in root ==="
-        ls -la
-        echo "=== pubspec.yaml content ==="
-        cat pubspec.yaml || echo "No pubspec.yaml"
+        if [ -f lib/main.dart.backup ]; then
+          cp lib/main.dart.backup lib/main.dart
+          echo "Restored our main.dart code"
+        else
+          echo "Using existing main.dart"
+        fi
         
     - name: Install dependencies
       run: flutter pub get
