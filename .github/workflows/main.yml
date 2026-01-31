@@ -16,177 +16,54 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.13.9'
+        flutter-version: '3.16.0'
         
-    - name: Create Android project structure
+    - name: Force create proper Flutter project
       run: |
-        echo "Creating Android project files..."
+        # Backup our code
+        if [ -d "lib" ]; then
+          cp -r lib lib_backup
+        fi
+        if [ -f "pubspec.yaml" ]; then
+          cp pubspec.yaml pubspec_backup.yaml
+        fi
         
-        # Create directories
-        mkdir -p android/app/src/main/kotlin/com/example/englishassessment
+        # Create fresh Flutter project
+        flutter create --template app --org com.example --project-name english_assessment .
         
-        # Create build.gradle
-        cat > android/app/build.gradle << 'EOF'
-        def localProperties = new Properties()
-        def localPropertiesFile = rootProject.file('local.properties')
-        if (localPropertiesFile.exists()) {
-            localPropertiesFile.withReader('UTF-8') { reader ->
-                localProperties.load(reader)
-            }
-        }
-
-        def flutterRoot = localProperties.getProperty('flutter.sdk')
-        if (flutterRoot == null) {
-            throw new GradleException("Flutter SDK not found.")
-        }
-
-        apply plugin: 'com.android.application'
-        apply plugin: 'kotlin-android'
-        apply from: "\$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
-
-        android {
-            compileSdkVersion flutter.compileSdkVersion
-            namespace "com.example.englishassessment"
-
-            compileOptions {
-                sourceCompatibility JavaVersion.VERSION_1_8
-                targetCompatibility JavaVersion.VERSION_1_8
-            }
-
-            kotlinOptions {
-                jvmTarget = '1.8'
-            }
-
-            sourceSets {
-                main.java.srcDirs += 'src/main/kotlin'
-            }
-
-            defaultConfig {
-                applicationId "com.example.englishassessment"
-                minSdkVersion flutter.minSdkVersion
-                targetSdkVersion flutter.targetSdkVersion
-                versionCode 1
-                versionName "1.0"
-            }
-
-            buildTypes {
-                release {
-                    signingConfig signingConfigs.debug
-                }
-            }
-        }
-
-        flutter {
-            source '../..'
-        }
-
-        dependencies {
-            implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.7.10"
-        }
-        EOF
+        # Restore our code
+        if [ -d "lib_backup" ]; then
+          rm -rf lib
+          mv lib_backup lib
+        fi
+        if [ -f "pubspec_backup.yaml" ]; then
+          mv pubspec_backup.yaml pubspec.yaml
+        fi
         
-        # Create AndroidManifest.xml IN CORRECT LOCATION
-        cat > android/app/src/main/AndroidManifest.xml << 'EOF'
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-            package="com.example.englishassessment">
-            
-            <uses-permission android:name="android.permission.INTERNET"/>
-            
-            <application
-                android:label="English Assessment"
-                android:name="${applicationName}"
-                android:icon="@mipmap/ic_launcher">
-                <activity
-                    android:name=".MainActivity"
-                    android:exported="true"
-                    android:launchMode="singleTop"
-                    android:theme="@style/LaunchTheme"
-                    android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-                    android:hardwareAccelerated="true"
-                    android:windowSoftInputMode="adjustResize">
-                    <meta-data
-                        android:name="io.flutter.embedding.android.NormalTheme"
-                        android:resource="@style/NormalTheme"/>
-                    <intent-filter>
-                        <action android:name="android.intent.action.MAIN"/>
-                        <category android:name="android.intent.category.LAUNCHER"/>
-                    </intent-filter>
-                </activity>
-                <meta-data
-                    android:name="flutterEmbedding"
-                    android:value="2"/>
-            </application>
-        </manifest>
-        EOF
-        
-        # Create MainActivity.kt
-        cat > android/app/src/main/kotlin/com/example/englishassessment/MainActivity.kt << 'EOF'
-        package com.example.englishassessment
-
-        import io.flutter.embedding.android.FlutterActivity
-
-        class MainActivity: FlutterActivity() {
-        }
-        EOF
-        
-        # Create root build.gradle
-        cat > android/build.gradle << 'EOF'
-        buildscript {
-            ext.kotlin_version = '1.7.10'
-            repositories {
-                google()
-                mavenCentral()
-            }
-
-            dependencies {
-                classpath 'com.android.tools.build:gradle:7.3.0'
-                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version"
-            }
-        }
-
-        allprojects {
-            repositories {
-                google()
-                mavenCentral()
-            }
-        }
-
-        rootProject.buildDir = '../build'
-        subprojects {
-            project.buildDir = "\${rootProject.buildDir}/\${project.name}"
-        }
-        subprojects {
-            project.evaluationDependsOn(':app')
-        }
-
-        tasks.register("clean", Delete) {
-            delete rootProject.buildDir
-        }
-        EOF
-        
-        # Create gradle.properties
-        cat > android/gradle.properties << 'EOF'
-        org.gradle.jvmargs=-Xmx1536M
-        android.enableR8=true
-        EOF
-        
-        # FIX: Create symlink for old Android embedding detection
-        ln -sf app/src/main/AndroidManifest.xml android/AndroidManifest.xml
-        
-        echo "✅ Android project files created successfully!"
+        echo "✅ Flutter project structure created"
         
     - name: Install dependencies
       run: flutter pub get
       
-    - name: Build APK with verbose output
-      run: |
-        echo "=== Building APK ==="
-        flutter build apk --release --verbose 2>&1 | tail -50
+    - name: Build APK
+      run: flutter build apk --release
       
+    - name: Find and list APK files
+      run: |
+        echo "=== Looking for APK files ==="
+        find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
+        echo "=== Build directory contents ==="
+        ls -la build/ || echo "No build directory"
+        ls -la build/app/ 2>/dev/null || echo "No build/app directory"
+        ls -la build/app/outputs/ 2>/dev/null || echo "No outputs directory"
+        ls -la build/app/outputs/flutter-apk/ 2>/dev/null || echo "No flutter-apk directory"
+        
     - name: Upload APK
-      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: english-assessment-app
-        path: build/app/outputs/flutter-apk/app-release.apk
+        path: |
+          build/app/outputs/flutter-apk/*.apk
+          build/app/outputs/apk/release/*.apk
+          build/app/outputs/bundle/release/*.aab
         retention-days: 7
