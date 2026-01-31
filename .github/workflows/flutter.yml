@@ -15,21 +15,57 @@ jobs:
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.16.0'
         
-    - name: Build APK
+    - name: Create proper Android project
       run: |
-        # Create project if needed
-        if [ ! -f android/app/build.gradle ]; then
-          flutter create --template app --platforms android --org com.example .
+        echo "=== Creating Android project with correct embedding ==="
+        
+        # Remove any existing android folder to start fresh
+        rm -rf android
+        
+        # Create fresh Flutter project with Android only
+        flutter create --template app --platforms android --org com.example --project-name english_assessment .
+        
+        echo "✅ Fresh Flutter project created"
+        
+    - name: Verify AndroidManifest.xml
+      run: |
+        echo "=== Checking AndroidManifest.xml ==="
+        cat android/app/src/main/AndroidManifest.xml
+        echo ""
+        echo "=== Looking for flutterEmbedding ==="
+        grep -n "flutterEmbedding" android/app/src/main/AndroidManifest.xml || echo "Adding flutterEmbedding..."
+        
+        # Ensure flutterEmbedding is present
+        if ! grep -q "flutterEmbedding" android/app/src/main/AndroidManifest.xml; then
+          # Add flutterEmbedding meta-data
+          sed -i '/<application/a\        <meta-data\n            android:name="flutterEmbedding"\n            android:value="2" />' android/app/src/main/AndroidManifest.xml
+          echo "✅ Added flutterEmbedding meta-data"
         fi
         
-        flutter pub get
-        flutter build apk --release
+        echo "=== Updated AndroidManifest.xml ==="
+        cat android/app/src/main/AndroidManifest.xml
         
-    - name: Upload ALL APK files
+    - name: Install dependencies
+      run: flutter pub get
+      
+    - name: Build APK
+      run: flutter build apk --release --verbose
+      
+    - name: Find APK file
+      run: |
+        echo "=== Searching for APK file ==="
+        find . -name "*.apk" -type f | head -10
+        echo "=== Build directory ==="
+        ls -la build/app/outputs/ || echo "No outputs directory"
+        find build/ -type f -name "*.apk" 2>/dev/null || echo "No APK found in build/"
+        
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: english-assessment-app
-        path: build/
-        if-no-files-found: error
+        path: build/app/outputs/flutter-apk/*.apk
+        if-no-files-found: warn
         retention-days: 7
