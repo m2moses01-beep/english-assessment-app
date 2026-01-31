@@ -15,49 +15,32 @@ jobs:
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.16.0'
         
-    - name: Create Android project with correct embedding
+    - name: Create essential Android files
       run: |
-        echo "=== Creating Android project structure ==="
+        echo "=== Creating minimal Android project ==="
+        
+        # Remove any existing android folder
+        rm -rf android
         
         # Create directory structure
         mkdir -p android/app/src/main/kotlin/com/example/englishassessment
-        mkdir -p android/app/src/main/res/xml
-        mkdir -p android/app/src/main/res/values
-        mkdir -p android/app/src/main/res/drawable
         
-        # Create AndroidManifest.xml WITH flutterEmbedding
+        # Create AndroidManifest.xml with flutterEmbedding
         cat > android/app/src/main/AndroidManifest.xml << 'EOF'
         <manifest xmlns:android="http://schemas.android.com/apk/res/android"
             package="com.example.englishassessment">
-            
-            <uses-permission android:name="android.permission.INTERNET"/>
-            
             <application
                 android:label="English Assessment"
-                android:name="${applicationName}"
-                android:icon="@mipmap/ic_launcher"
-                android:roundIcon="@mipmap/ic_launcher_round">
+                android:icon="@mipmap/ic_launcher">
                 <activity
                     android:name=".MainActivity"
-                    android:exported="true"
-                    android:launchMode="singleTop"
-                    android:theme="@style/LaunchTheme"
-                    android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-                    android:hardwareAccelerated="true"
-                    android:windowSoftInputMode="adjustResize">
-                    <meta-data
-                        android:name="io.flutter.embedding.android.NormalTheme"
-                        android:resource="@style/NormalTheme"/>
+                    android:exported="true">
                     <intent-filter>
                         <action android:name="android.intent.action.MAIN"/>
                         <category android:name="android.intent.category.LAUNCHER"/>
                     </intent-filter>
                 </activity>
-                
-                <!-- THIS IS THE CRITICAL LINE -->
                 <meta-data
                     android:name="flutterEmbedding"
                     android:value="2"/>
@@ -68,137 +51,19 @@ jobs:
         # Create MainActivity.kt
         cat > android/app/src/main/kotlin/com/example/englishassessment/MainActivity.kt << 'EOF'
         package com.example.englishassessment
-
         import io.flutter.embedding.android.FlutterActivity
-
-        class MainActivity: FlutterActivity() {
-        }
+        class MainActivity: FlutterActivity()
         EOF
         
-        # Create build.gradle for app
-        cat > android/app/build.gradle << 'EOF'
-        def localProperties = new Properties()
-        def localPropertiesFile = rootProject.file('local.properties')
-        if (localPropertiesFile.exists()) {
-            localPropertiesFile.withReader('UTF-8') { reader ->
-                localProperties.load(reader)
-            }
-        }
-
-        def flutterRoot = localProperties.getProperty('flutter.sdk')
-        if (flutterRoot == null) {
-            throw new GradleException("Flutter SDK not found.")
-        }
-
-        apply plugin: 'com.android.application'
-        apply plugin: 'kotlin-android'
-        apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
-
-        android {
-            compileSdkVersion 34
-            namespace "com.example.englishassessment"
-
-            compileOptions {
-                sourceCompatibility JavaVersion.VERSION_1_8
-                targetCompatibility JavaVersion.VERSION_1_8
-            }
-
-            kotlinOptions {
-                jvmTarget = '1.8'
-            }
-
-            sourceSets {
-                main.java.srcDirs += 'src/main/kotlin'
-            }
-
-            defaultConfig {
-                applicationId "com.example.englishassessment"
-                minSdkVersion 21
-                targetSdkVersion 34
-                versionCode 1
-                versionName "1.0"
-            }
-
-            buildTypes {
-                release {
-                    signingConfig signingConfigs.debug
-                }
-            }
-        }
-
-        flutter {
-            source '../..'
-        }
-
-        dependencies {
-            implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.7.10"
-        }
-        EOF
+        echo "✅ Created minimal Android files"
         
-        # Create root build.gradle
-        cat > android/build.gradle << 'EOF'
-        buildscript {
-            ext.kotlin_version = '1.7.10'
-            repositories {
-                google()
-                mavenCentral()
-            }
-
-            dependencies {
-                classpath 'com.android.tools.build:gradle:7.3.0'
-                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-            }
-        }
-
-        allprojects {
-            repositories {
-                google()
-                mavenCentral()
-            }
-        }
-
-        rootProject.buildDir = '../build'
-        subprojects {
-            project.buildDir = "${rootProject.buildDir}/${project.name}"
-        }
-        subprojects {
-            project.evaluationDependsOn(':app')
-        }
-
-        tasks.register("clean", Delete) {
-            delete rootProject.buildDir
-        }
-        EOF
-        
-        # Create gradle.properties
-        cat > android/gradle.properties << 'EOF'
-        org.gradle.jvmargs=-Xmx1536M
-        android.enableR8=true
-        EOF
-        
-        # Create gradle wrapper properties
-        mkdir -p android/gradle/wrapper
-        cat > android/gradle/wrapper/gradle-wrapper.properties << 'EOF'
-        distributionBase=GRADLE_USER_HOME
-        distributionPath=wrapper/dists
-        zipStoreBase=GRADLE_USER_HOME
-        zipStorePath=wrapper/dists
-        distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-all.zip
-        EOF
-        
-        echo "✅ Android project created with flutterEmbedding:2"
-        
-    - name: Install dependencies
-      run: flutter pub get
-      
     - name: Build APK
       run: |
-        echo "=== Building APK ==="
-        flutter build apk --release --no-sound-null-safety
+        flutter pub get
+        flutter build apk --release
         
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: english-assessment-app
         path: build/app/outputs/flutter-apk/app-release.apk
-        retention-days: 7
