@@ -15,12 +15,10 @@ jobs:
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.16.0'
         
-    - name: Create complete Android project
+    - name: Create Android project with fixed Kotlin version
       run: |
-        echo "=== Creating complete Android project ==="
+        echo "=== Creating Android project ==="
         
         # Clean up
         rm -rf android
@@ -28,10 +26,16 @@ jobs:
         # Create directory structure
         mkdir -p android/app/src/main/kotlin/com/example/englishassessment
         mkdir -p android/app/src/main/res/values
-        mkdir -p android/gradle/wrapper
         
-        # 1. Create settings.gradle (CRITICAL - tells Gradle about 'app' module)
+        # 1. Create settings.gradle
         cat > android/settings.gradle << 'EOF'
+        pluginManagement {
+            repositories {
+                google()
+                mavenCentral()
+                gradlePluginPortal()
+            }
+        }
         include ':app'
         EOF
         
@@ -39,12 +43,19 @@ jobs:
         cat > android/app/src/main/AndroidManifest.xml << 'EOF'
         <manifest xmlns:android="http://schemas.android.com/apk/res/android"
             package="com.example.englishassessment">
+            <uses-permission android:name="android.permission.INTERNET"/>
             <application
                 android:label="English Assessment"
-                android:icon="@mipmap/ic_launcher">
+                android:icon="@mipmap/ic_launcher"
+                android:usesCleartextTraffic="true">
                 <activity
                     android:name=".MainActivity"
-                    android:exported="true">
+                    android:exported="true"
+                    android:launchMode="singleTop"
+                    android:theme="@style/LaunchTheme"
+                    android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+                    android:hardwareAccelerated="true"
+                    android:windowSoftInputMode="adjustResize">
                     <intent-filter>
                         <action android:name="android.intent.action.MAIN"/>
                         <category android:name="android.intent.category.LAUNCHER"/>
@@ -62,7 +73,7 @@ jobs:
         class MainActivity: FlutterActivity()
         EOF
         
-        # 4. Create app/build.gradle
+        # 4. Create app/build.gradle (FIXED KOTLIN VERSION)
         cat > android/app/build.gradle << 'EOF'
         def localProperties = new Properties()
         def localPropertiesFile = rootProject.file('local.properties')
@@ -122,18 +133,16 @@ jobs:
         }
         EOF
         
-        # 5. Create android/build.gradle
+        # 5. Create android/build.gradle (FIXED - no $kotlin_version variable)
         cat > android/build.gradle << 'EOF'
         buildscript {
-            ext.kotlin_version = '1.7.10'
             repositories {
                 google()
                 mavenCentral()
             }
-
             dependencies {
                 classpath 'com.android.tools.build:gradle:7.3.0'
-                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version"
+                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.7.10"
             }
         }
 
@@ -145,13 +154,16 @@ jobs:
         }
         EOF
         
-        # 6. Create gradle.properties
+        # 6. Create gradle.properties (ENABLE ANDROIDX)
         cat > android/gradle.properties << 'EOF'
         org.gradle.jvmargs=-Xmx1536M
         android.enableR8=true
+        android.useAndroidX=true
+        android.enableJetifier=true
         EOF
         
         # 7. Create gradle wrapper
+        mkdir -p android/gradle/wrapper
         cat > android/gradle/wrapper/gradle-wrapper.properties << 'EOF'
         distributionBase=GRADLE_USER_HOME
         distributionPath=wrapper/dists
@@ -160,7 +172,7 @@ jobs:
         distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-all.zip
         EOF
         
-        echo "✅ Complete Android project with settings.gradle created"
+        echo "✅ Android project created with fixed Kotlin version"
         
     - name: Install dependencies
       run: flutter pub get
