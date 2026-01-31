@@ -9,13 +9,16 @@ jobs:
     - uses: actions/checkout@v4
     - uses: subosito/flutter-action@v2
     
-    - name: Create project with Flutter
+    - name: Create and fix Android project
       run: |
-        echo "=== Using Flutter to create project ==="
+        echo "=== Creating and fixing Android project ==="
+        
+        # Remove old android folder
+        rm -rf android
         
         # Save our code
         if [ -d "lib" ]; then
-          mv lib lib_backup
+          cp -r lib lib_backup
         fi
         
         # Let Flutter create complete project
@@ -27,7 +30,28 @@ jobs:
           mv lib_backup lib
         fi
         
-        echo "✅ Flutter created Android files"
+        # CRITICAL: FORCE add flutterEmbedding:2 to AndroidManifest.xml
+        echo "=== Adding flutterEmbedding:2 to AndroidManifest.xml ==="
+        
+        # Read the current AndroidManifest.xml
+        MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+        
+        # Check if flutterEmbedding already exists
+        if grep -q "flutterEmbedding" "$MANIFEST_FILE"; then
+          echo "flutterEmbedding already exists, updating to value='2'"
+          # Update existing to value="2"
+          sed -i 's/android:name="flutterEmbedding".*/android:name="flutterEmbedding" android:value="2"\/>/' "$MANIFEST_FILE"
+        else
+          echo "Adding flutterEmbedding meta-data"
+          # Add flutterEmbedding after <application> tag
+          sed -i '/<application/a\        <meta-data android:name="flutterEmbedding" android:value="2"\/>' "$MANIFEST_FILE"
+        fi
+        
+        # Verify the change
+        echo "=== Updated AndroidManifest.xml ==="
+        grep -n "flutterEmbedding" "$MANIFEST_FILE" || echo "ERROR: flutterEmbedding not found!"
+        
+        echo "✅ Android project created and fixed"
     
     - name: Build APK
       run: |
@@ -36,5 +60,5 @@ jobs:
     
     - uses: actions/upload-artifact@v4
       with:
-        name: app
-        path: build/app/outputs/flutter-apk/
+        name: english-assessment-app
+        path: build/app/outputs/flutter-apk/app-release.apk
