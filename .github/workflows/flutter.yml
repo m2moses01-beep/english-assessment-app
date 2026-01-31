@@ -9,29 +9,37 @@ jobs:
     - uses: actions/checkout@v4
     - uses: subosito/flutter-action@v2
     
-    - name: Check for Android files
+    - name: Create proper Android project
       run: |
-        if [ ! -d "android" ]; then
-          echo "❌ No android folder found. Creating one..."
-          # Create basic Android structure
-          mkdir -p android/app/src/main/kotlin
-          echo 'include ":app"' > android/settings.gradle
-          echo 'buildscript { dependencies { classpath "com.android.tools.build:gradle:7.3.0" } }' > android/build.gradle
-        else
-          echo "✅ Android folder exists"
-        fi
+        echo "=== Creating Android project ==="
+        
+        # Remove old android folder completely
+        rm -rf android
+        
+        # Create fresh Flutter project in temp location
+        flutter create --template app --platforms android --org com.example temp_flutter_app
+        
+        # Copy ALL Android files
+        cp -r temp_flutter_app/android .
+        
+        # CRITICAL: Ensure flutterEmbedding:2 is in AndroidManifest
+        sed -i '/<application/a\        <meta-data\n            android:name="flutterEmbedding"\n            android:value="2" />' android/app/src/main/AndroidManifest.xml
+        
+        # Clean up
+        rm -rf temp_flutter_app
+        
+        echo "✅ Android project created with flutterEmbedding:2"
+        
+        # Verify the file was updated
+        echo "=== Checking AndroidManifest.xml ==="
+        grep -n "flutterEmbedding" android/app/src/main/AndroidManifest.xml || echo "WARNING: flutterEmbedding not found!"
     
-    - name: Generate missing files with Flutter
-      run: |
-        # This will generate any missing Android files
-        flutter create --platforms android --org com.example --project-name english_assessment . 2>/dev/null || true
-    
-    - name: Build
+    - name: Build APK
       run: |
         flutter pub get
         flutter build apk --release
     
     - uses: actions/upload-artifact@v4
       with:
-        name: app
-        path: build/app/outputs/flutter-apk/
+        name: english-assessment-app
+        path: build/app/outputs/flutter-apk/app-release.apk
