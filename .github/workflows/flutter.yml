@@ -9,23 +9,28 @@ jobs:
     - uses: actions/checkout@v4
     - uses: subosito/flutter-action@v2
     
-    - name: Download official Flutter Android template
+    - name: Let Flutter create everything
       run: |
-        # Create directory structure
-        mkdir -p android/app/src/main/kotlin/com/example/englishassessment
+        # Temporarily move our code
+        if [ -d "lib" ]; then
+          mv lib lib_temp
+        fi
         
-        # Download OFFICIAL Flutter template files
-        wget -q https://raw.githubusercontent.com/flutter/flutter/master/packages/flutter_tools/templates/app/android.tmpl/settings.gradle.tmpl -O android/settings.gradle
-        wget -q https://raw.githubusercontent.com/flutter/flutter/stable/packages/flutter_tools/templates/app/android.tmpl/app/build.gradle.tmpl -O android/app/build.gradle
-        wget -q https://raw.githubusercontent.com/flutter/flutter/stable/packages/flutter_tools/templates/app/android.tmpl/app/src/main/AndroidManifest.xml.tmpl -O android/app/src/main/AndroidManifest.xml
-        wget -q https://raw.githubusercontent.com/flutter/flutter/stable/packages/flutter_tools/templates/app/android.tmpl/app/src/main/kotlin/com/example/app/MainActivity.kt.tmpl -O android/app/src/main/kotlin/com/example/englishassessment/MainActivity.kt
+        # Let Flutter create complete project
+        flutter create --template app --org com.example --overwrite .
         
-        echo "✅ Downloaded official Flutter Android templates"
+        # Restore our code
+        if [ -d "lib_temp" ]; then
+          rm -rf lib
+          mv lib_temp lib
+        fi
+        
+        echo "✅ Flutter created Android/iOS files"
     
     - run: flutter pub get
     - run: flutter build apk --release
     
     - uses: actions/upload-artifact@v4
       with:
-        name: english-assessment-app
-        path: build/app/outputs/flutter-apk/app-release.apk
+        name: app
+        path: build/app/outputs/flutter-apk/
