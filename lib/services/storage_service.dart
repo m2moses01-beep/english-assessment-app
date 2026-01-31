@@ -35,7 +35,7 @@ class StorageService {
     }
   }
   
-  // Get statistics
+// Get statistics
 static Future<Map<String, dynamic>> getStatistics() async {
   final results = await getTestResults();
   
