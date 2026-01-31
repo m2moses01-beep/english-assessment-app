@@ -9,69 +9,25 @@ jobs:
     - uses: actions/checkout@v4
     - uses: subosito/flutter-action@v2
     
-    - name: Create AndroidManifest.xml with correct embedding
+    - name: Generate complete Android project
       run: |
-        echo "=== Creating correct AndroidManifest.xml ==="
+        # Create fresh Flutter project
+        flutter create --template app --platforms android --org com.example --project-name english_assessment temp_app
         
-        # Remove old
-        rm -rf android
+        # Copy ALL Android files
+        cp -r temp_app/android .
         
-        # Create directory
-        mkdir -p android/app/src/main
+        # Force flutterEmbedding:2
+        sed -i '/<application/a\        <meta-data android:name="flutterEmbedding" android:value="2"/>' android/app/src/main/AndroidManifest.xml
         
-        # Create CORRECT AndroidManifest.xml
-        cat > android/app/src/main/AndroidManifest.xml << 'EOF'
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-            package="com.example.englishassessment">
-            
-            <uses-permission android:name="android.permission.INTERNET"/>
-            
-            <application
-                android:label="English Assessment"
-                android:icon="@mipmap/ic_launcher"
-                android:usesCleartextTraffic="true">
-                
-                <activity
-                    android:name=".MainActivity"
-                    android:exported="true"
-                    android:launchMode="singleTop"
-                    android:theme="@style/LaunchTheme"
-                    android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-                    android:hardwareAccelerated="true"
-                    android:windowSoftInputMode="adjustResize">
-                    
-                    <meta-data
-                        android:name="io.flutter.embedding.android.NormalTheme"
-                        android:resource="@style/NormalTheme"/>
-                    
-                    <intent-filter>
-                        <action android:name="android.intent.action.MAIN"/>
-                        <category android:name="android.intent.category.LAUNCHER"/>
-                    </intent-filter>
-                </activity>
-                
-                <!-- THIS LINE IS CRITICAL -->
-                <meta-data
-                    android:name="flutterEmbedding"
-                    android:value="2"/>
-                    
-            </application>
-        </manifest>
-        EOF
+        rm -rf temp_app
         
-        echo "✅ Created AndroidManifest.xml with flutterEmbedding:2"
-        
-        # Create minimal other files
-        mkdir -p android/app/src/main/kotlin/com/example/englishassessment
-        echo 'package com.example.englishassessment; import io.flutter.embedding.android.FlutterActivity; class MainActivity: FlutterActivity()' > android/app/src/main/kotlin/com/example/englishassessment/MainActivity.kt
-        echo 'include ":app"' > android/settings.gradle
+        echo "✅ Android project generated"
     
-    - name: Build APK
-      run: |
-        flutter pub get
-        flutter build apk --release
+    - run: flutter pub get
+    - run: flutter build apk --release
     
     - uses: actions/upload-artifact@v4
       with:
-        name: app-apk
+        name: app
         path: build/app/outputs/flutter-apk/
