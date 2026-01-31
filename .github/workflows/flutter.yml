@@ -9,132 +9,25 @@ jobs:
     - uses: actions/checkout@v4
     - uses: subosito/flutter-action@v2
     
-    - name: Create Android project with valid XML
+    - name: Create project with Flutter
       run: |
-        echo "=== Creating Android project ==="
+        echo "=== Using Flutter to create project ==="
         
-        # Remove old
-        rm -rf android
+        # Save our code
+        if [ -d "lib" ]; then
+          mv lib lib_backup
+        fi
         
-        # Create directories
-        mkdir -p android/app/src/main/kotlin/com/example/englishassessment
-        mkdir -p android/gradle/wrapper
+        # Let Flutter create complete project
+        flutter create --template app --platforms android --org com.example --project-name english_assessment .
         
-        # 1. Create SIMPLE VALID AndroidManifest.xml
-        cat > android/app/src/main/AndroidManifest.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-            package="com.example.englishassessment">
-            
-            <uses-permission android:name="android.permission.INTERNET"/>
-            
-            <application
-                android:label="English Assessment"
-                android:icon="@mipmap/ic_launcher">
-                
-                <activity
-                    android:name=".MainActivity"
-                    android:exported="true">
-                    
-                    <intent-filter>
-                        <action android:name="android.intent.action.MAIN"/>
-                        <category android:name="android.intent.category.LAUNCHER"/>
-                    </intent-filter>
-                </activity>
-                
-                <meta-data
-                    android:name="flutterEmbedding"
-                    android:value="2"/>
-                    
-            </application>
-        </manifest>
-        EOF
+        # Restore our code
+        if [ -d "lib_backup" ]; then
+          rm -rf lib
+          mv lib_backup lib
+        fi
         
-        # 2. Create MainActivity.kt
-        echo 'package com.example.englishassessment; import io.flutter.embedding.android.FlutterActivity; class MainActivity: FlutterActivity()' > android/app/src/main/kotlin/com/example/englishassessment/MainActivity.kt
-        
-        # 3. Create settings.gradle
-        echo 'include ":app"' > android/settings.gradle
-        
-        # 4. Create app/build.gradle (SIMPLIFIED)
-        cat > android/app/build.gradle << 'EOF'
-        apply plugin: 'com.android.application'
-        apply plugin: 'kotlin-android'
-
-        android {
-            compileSdkVersion 34
-            namespace "com.example.englishassessment"
-
-            compileOptions {
-                sourceCompatibility JavaVersion.VERSION_1_8
-                targetCompatibility JavaVersion.VERSION_1_8
-            }
-
-            kotlinOptions {
-                jvmTarget = '1.8'
-            }
-
-            sourceSets {
-                main.java.srcDirs += 'src/main/kotlin'
-            }
-
-            defaultConfig {
-                applicationId "com.example.englishassessment"
-                minSdkVersion 21
-                targetSdkVersion 34
-                versionCode 1
-                versionName "1.0"
-            }
-
-            buildTypes {
-                release {
-                    signingConfig signingConfigs.debug
-                }
-            }
-        }
-
-        dependencies {
-            implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.7.10"
-        }
-        EOF
-        
-        # 5. Create android/build.gradle
-        cat > android/build.gradle << 'EOF'
-        buildscript {
-            repositories {
-                google()
-                mavenCentral()
-            }
-            dependencies {
-                classpath 'com.android.tools.build:gradle:7.3.0'
-                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.7.10"
-            }
-        }
-
-        allprojects {
-            repositories {
-                google()
-                mavenCentral()
-            }
-        }
-        EOF
-        
-        # 6. Create gradle.properties
-        cat > android/gradle.properties << 'EOF'
-        org.gradle.jvmargs=-Xmx1536M
-        android.useAndroidX=true
-        EOF
-        
-        # 7. Create gradle-wrapper.properties
-        cat > android/gradle/wrapper/gradle-wrapper.properties << 'EOF'
-        distributionBase=GRADLE_USER_HOME
-        distributionPath=wrapper/dists
-        zipStoreBase=GRADLE_USER_HOME
-        zipStorePath=wrapper/dists
-        distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-all.zip
-        EOF
-        
-        echo "✅ Android project created with valid XML"
+        echo "✅ Flutter created Android files"
     
     - name: Build APK
       run: |
@@ -143,5 +36,5 @@ jobs:
     
     - uses: actions/upload-artifact@v4
       with:
-        name: english-assessment-app
-        path: build/app/outputs/flutter-apk/app-release.apk
+        name: app
+        path: build/app/outputs/flutter-apk/
