@@ -373,6 +373,34 @@ class AdaptiveTestEngine {
   }
 }
 
+// Mock StorageService for compilation
+class StorageService {
+  static Future<Map<String, dynamic>> getStatistics() async {
+    // Mock implementation
+    return {
+      'totalTests': 5,
+      'averageAccuracy': 0.75,
+      'bestLevel': 'B2',
+      'totalQuestions': 50,
+      'correctAnswers': 38,
+      'overallAccuracy': 0.76,
+    };
+  }
+  
+  static Future<List<TestResult>> getTestResults() async {
+    // Mock implementation
+    return [];
+  }
+  
+  static Future<void> clearAllData() async {
+    // Mock implementation
+  }
+  
+  static Future<void> saveTestResult(TestResult result) async {
+    // Mock implementation
+  }
+}
+
 // ============ WIDGETS ============
 class DifficultyBadge extends StatelessWidget {
   final CEFRLevel level;
@@ -670,6 +698,32 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // ADDED: View My Progress button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ProfileScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.person, size: 22),
+                      label: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        child: Text('View My Progress', style: TextStyle(fontSize: 16)),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
                 ],
               ),
               
@@ -743,6 +797,8 @@ class _AdaptiveTestScreenState extends State<AdaptiveTestScreen> {
             testComplete = true;
             testResult = testEngine.getResults();
           });
+          // Save test result
+          StorageService.saveTestResult(testResult!);
         } else {
           setState(() {
             selectedAnswer = null;
@@ -1275,6 +1331,8 @@ class ResultsScreen extends StatelessWidget {
     if (accuracy >= 0.4) return 'Fair Performance';
     return 'Needs More Practice';
   }
+}
+
 // ============ PROFILE SCREEN ============
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -1469,16 +1527,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         width: 40,
                                         height: 40,
                                         decoration: BoxDecoration(
-                                          color: result.estimatedLevel.color.withOpacity(0.2),
+                                          color: AppExtensions.getCEFRColor(result.estimatedLevel).withOpacity(0.2),
                                           shape: BoxShape.circle,
-                                          border: Border.all(color: result.estimatedLevel.color),
+                                          border: Border.all(color: AppExtensions.getCEFRColor(result.estimatedLevel)),
                                         ),
                                         child: Center(
                                           child: Text(
-                                            result.estimatedLevel.shortName,
+                                            AppExtensions.getCEFRShortName(result.estimatedLevel),
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
-                                              color: result.estimatedLevel.color,
+                                              color: AppExtensions.getCEFRColor(result.estimatedLevel),
                                             ),
                                           ),
                                         ),
@@ -1619,6 +1677,3 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 }
-}
-
-
