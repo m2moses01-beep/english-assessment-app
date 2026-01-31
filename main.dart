@@ -1274,4 +1274,348 @@ class ResultsScreen extends StatelessWidget {
     if (accuracy >= 0.4) return 'Fair Performance';
     return 'Needs More Practice';
   }
+// ============ PROFILE SCREEN ============
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({Key? key}) : super(key: key);
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  Map<String, dynamic> _stats = {
+    'totalTests': 0,
+    'averageAccuracy': 0.0,
+    'bestLevel': 'N/A',
+    'totalQuestions': 0,
+    'correctAnswers': 0,
+    'overallAccuracy': 0.0,
+  };
+  bool _loading = true;
+  List<TestResult> _testHistory = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final stats = await StorageService.getStatistics();
+    final history = await StorageService.getTestResults();
+    
+    setState(() {
+      _stats = stats;
+      _testHistory = history;
+      _loading = false;
+    });
+  }
+
+  Future<void> _clearData() async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear All Data'),
+        content: const Text('Are you sure you want to delete all test history? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await StorageService.clearAllData();
+              Navigator.pop(context);
+              await _loadData();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('All data cleared successfully')),
+              );
+            },
+            child: const Text('Clear', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('My Progress'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadData,
+            tooltip: 'Refresh',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: _clearData,
+            tooltip: 'Clear Data',
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Stats Card
+                  Card(
+                    elevation: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.analytics, size: 60, color: Colors.blue),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Learning Statistics',
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildStatCard('Tests Taken', _stats['totalTests'].toString()),
+                              _buildStatCard('Avg. Accuracy', '${(_stats['averageAccuracy'] * 100).toStringAsFixed(1)}%'),
+                              _buildStatCard('Best Level', _stats['bestLevel'].toString()),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  'Overall Performance',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                LinearProgressIndicator(
+                                  value: _stats['overallAccuracy'],
+                                  backgroundColor: Colors.grey.shade300,
+                                  color: _getAccuracyColor(_stats['overallAccuracy']),
+                                  minHeight: 12,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${_stats['correctAnswers']}/${_stats['totalQuestions']} correct '
+                                  '(${(_stats['overallAccuracy'] * 100).toStringAsFixed(1)}%)',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Test History
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Test History',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          if (_testHistory.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.all(20),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.history_toggle_off, size: 50, color: Colors.grey),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    'No tests taken yet',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                  Text(
+                                    'Take your first test to see history here!',
+                                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Column(
+                              children: _testHistory.reversed.map((result) {
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.grey.shade200),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          color: result.estimatedLevel.color.withOpacity(0.2),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: result.estimatedLevel.color),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            result.estimatedLevel.shortName,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: result.estimatedLevel.color,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Test on ${_formatDate(result.completedAt)}',
+                                              style: const TextStyle(fontWeight: FontWeight.bold),
+                                            ),
+                                            Text(
+                                              'Score: ${result.correctAnswers}/${result.questionsAnswered} '
+                                              '(${(result.accuracy * 100).toStringAsFixed(1)}%)',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                            Text(
+                                              'Time: ${result.totalTime.inMinutes}m ${result.totalTime.inSeconds % 60}s',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey.shade500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.arrow_forward_ios,
+                                        size: 16,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Tips Card
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Learning Tips',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildTip(
+                            Icons.trending_up,
+                            'Consistent Practice',
+                            'Take at least one test daily to see improvement',
+                          ),
+                          _buildTip(
+                            Icons.auto_stories,
+                            'Review Mistakes',
+                            'Always check explanations for wrong answers',
+                          ),
+                          _buildTip(
+                            Icons.timer,
+                            'Time Management',
+                            'Try to answer questions within 30 seconds each',
+                          ),
+                          _buildTip(
+                            Icons.repeat,
+                            'Repeat Tests',
+                            'Retake tests to reinforce learning',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildStatCard(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTip(IconData icon, String title, String description) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Colors.blue, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(description, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getAccuracyColor(double accuracy) {
+    if (accuracy >= 0.8) return Colors.green;
+    if (accuracy >= 0.6) return Colors.blue;
+    if (accuracy >= 0.4) return Colors.orange;
+    return Colors.red;
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+}
 }
