@@ -36,40 +36,40 @@ class StorageService {
   }
   
   // Get statistics
-  static Future<Map<String, dynamic>> getStatistics() async {
-    final results = await getTestResults();
-    
-    if (results.isEmpty) {
-      return {
-        'totalTests': 0,
-        'averageAccuracy': 0.0,
-        'bestLevel': 'N/A',
-        'totalQuestions': 0,
-        'correctAnswers': 0,
-      };
-    }
-    
-    final totalTests = results.length;
-    final totalAccuracy = results.map((r) => r.accuracy).reduce((a, b) => a + b);
-    final averageAccuracy = totalAccuracy / totalTests;
-    
-    // Find highest level achieved
-    final highestLevelIndex = results
-        .map((r) => r.estimatedLevel.index)
-        .reduce((a, b) => a > b ? a : b);
-    
-    final totalQuestions = results.fold(0, (sum, result) => sum + result.questionsAnswered);
-    final totalCorrect = results.fold(0, (sum, result) => sum + result.correctAnswers);
-    
+static Future<Map<String, dynamic>> getStatistics() async {
+  final results = await getTestResults();
+  
+  if (results.isEmpty) {
     return {
-      'totalTests': totalTests,
-      'averageAccuracy': averageAccuracy,
-      'bestLevel': _getLevelName(highestLevelIndex),
-      'totalQuestions': totalQuestions,
-      'correctAnswers': totalCorrect,
-      'overallAccuracy': totalQuestions > 0 ? totalCorrect / totalQuestions : 0.0,
+      'totalTests': 0,
+      'averageAccuracy': 0.0,
+      'bestLevel': 'N/A',
+      'totalQuestions': 0,
+      'correctAnswers': 0,
     };
   }
+  
+  final totalTests = results.length;
+  final totalAccuracy = results.map((r) => r.accuracy).reduce((a, b) => a + b);
+  final averageAccuracy = totalAccuracy / totalTests;
+  
+  // Find highest level achieved
+  final highestLevelIndex = results
+      .map((r) => r.estimatedLevel.index)
+      .reduce((a, b) => a > b ? a : b);
+  
+  final totalQuestions = results.fold(0, (sum, result) => sum + result.questionsAnswered);
+  final totalCorrect = results.fold(0, (sum, result) => sum + result.correctAnswers);
+  
+  return {
+    'totalTests': totalTests,
+    'averageAccuracy': averageAccuracy,
+    'bestLevel': _getLevelName(highestLevelIndex),
+    'totalQuestions': totalQuestions,
+    'correctAnswers': totalCorrect,
+    'overallAccuracy': totalQuestions > 0 ? totalCorrect / totalQuestions : 0.0,
+  };
+}
   
   // Clear all data
   static Future<void> clearAllData() async {
