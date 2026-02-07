@@ -1,9 +1,7 @@
-name: Build Windows App
+name: Build Windows Release
 
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
 
 jobs:
@@ -15,54 +13,48 @@ jobs:
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
-      with:
-        channel: 'stable'
-        cache: true
     
-    - name: Create Windows Files
-      shell: pwsh
+    - name: Create Required Windows Files
       run: |
-        # Create minimal required files
-        Set-Content -Path "windows/runner/resource.h" -Value "#pragma once`r`n`r`n#define IDI_APP_ICON 101`r`n#define IDR_APPLICATION_MANIFEST 102" -Encoding ASCII
+        # Create the essential files
+        echo "#pragma once" > windows/runner/resource.h
+        echo. >> windows/runner/resource.h
+        echo "#define IDI_APP_ICON 101" >> windows/runner/resource.h
+        echo "#define IDR_APPLICATION_MANIFEST 102" >> windows/runner/resource.h
         
-        # Create runner.rc with commented icon for now
-        Set-Content -Path "windows/runner/runner.rc" -Value "#include `"resource.h`"`r`n`r`n// Icon temporarily disabled - build works without it`r`n// IDI_APP_ICON ICON `"resources/app_icon.ico`"`r`n`r`nIDR_APPLICATION_MANIFEST RT_MANIFEST `"runner.exe.manifest`"" -Encoding ASCII
-        
-        Write-Host "✅ Created Windows build files" -ForegroundColor Green
+        echo "#include \"resource.h\"" > windows/runner/runner.rc
+        echo. >> windows/runner/runner.rc
+        echo "// Build works without icon for now" >> windows/runner/runner.rc
+        echo "// IDI_APP_ICON ICON \"resources/app_icon.ico\"" >> windows/runner/runner.rc
+        echo. >> windows/runner/runner.rc
+        echo "IDR_APPLICATION_MANIFEST RT_MANIFEST \"runner.exe.manifest\"" >> windows/runner/runner.rc
     
     - name: Install Dependencies
       run: flutter pub get
     
-    - name: Build Windows (Debug)
-      run: flutter build windows --debug
+    - name: Clean Previous Builds
+      run: flutter clean
     
-    - name: Build Windows (Release)
+    - name: Build Release Version
       run: flutter build windows --release
     
-    - name: List Build Output
+    - name: Verify Release Build
       run: |
-        Write-Host "=== Build Output Structure ===" -ForegroundColor Cyan
-        Get-ChildItem -Path "build\windows" -Recurse | Format-Table Name, Length, LastWriteTime
-        
-        Write-Host "`n=== Release Build Files ===" -ForegroundColor Green
-        if (Test-Path "build\windows\runner\Release") {
-            Get-ChildItem -Path "build\windows\runner\Release" -Recurse | Format-Table Name, Length
-        }
+        echo "=== Checking Release Build ==="
+        if [ -d "build/windows/runner/Release" ]; then
+          echo "✅ Release directory found"
+          ls -la "build/windows/runner/Release/"
+          echo "=== Executable size ==="
+          find "build/windows/runner/Release" -name "*.exe" -exec du -h {} \;
+        else
+          echo "❌ Release directory not found"
+          echo "Available directories:"
+          find "build" -type d | sort
+        fi
     
-    - name: Upload Debug Build Artifact
+    - name: Upload Windows App
       uses: actions/upload-artifact@v4
       with:
-        name: windows-debug-build
-        path: |
-          build/windows/runner/Debug/
-          build/windows/flutter/Debug/
-        retention-days: 7
-    
-    - name: Upload Release Build Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-release-build
-        path: |
-          build/windows/runner/Release/
-          build/windows/flutter/Release/
-        retention-days: 7
+        name: windows-application
+        path: build/windows/runner/Release/
+        if-no-files-found: error
