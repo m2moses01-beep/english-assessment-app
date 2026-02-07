@@ -1087,7 +1087,7 @@ class HomeScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'SAMPLE VERSION',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
@@ -2364,3 +2364,4 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Colors.red;
   }
 }
+
