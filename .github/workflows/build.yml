@@ -1,0 +1,48 @@
+name: Build Windows App
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
+        cache: true
+    
+    - name: Create Missing Windows Files
+      run: |
+        # Create required Windows files
+        echo "#pragma once" > windows/runner/resource.h
+        echo "" >> windows/runner/resource.h
+        echo "#define IDI_APP_ICON 101" >> windows/runner/resource.h
+        echo "#define IDR_APPLICATION_MANIFEST 102" >> windows/runner/resource.h
+        
+        if not exist windows/runner/runner.rc (
+          echo #include "resource.h" > windows/runner/runner.rc
+          echo. >> windows/runner/runner.rc
+          echo IDI_APP_ICON ICON "resources/app_icon.ico" >> windows/runner/runner.rc
+          echo. >> windows/runner/runner.rc
+          echo IDR_APPLICATION_MANIFEST RT_MANIFEST "runner.exe.manifest" >> windows/runner/runner.rc
+        )
+        
+        if not exist windows/runner/resources mkdir windows/runner/resources
+        if not exist windows/runner/resources/app_icon.ico (
+          # Create empty file as placeholder
+          break > windows/runner/resources/app_icon.ico
+        )
+    
+    - name: Install Dependencies
+      run: flutter pub get
+    
+    - name: Build Windows
+      run: flutter build windows --release
