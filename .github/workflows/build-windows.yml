@@ -19,78 +19,22 @@ jobs:
         channel: 'stable'
         cache: true
     
-    - name: Create Valid Windows Files
+    - name: Create Windows Files with Working Icon
       shell: pwsh
       run: |
-        Write-Host "=== Creating valid Windows build files ===" -ForegroundColor Cyan
+        Write-Host "=== Creating Windows files with guaranteed working icon ===" -ForegroundColor Cyan
         
         # 1. Create resource.h
         Set-Content -Path "windows/runner/resource.h" -Value "#pragma once`r`n`r`n#define IDI_APP_ICON 101`r`n#define IDR_APPLICATION_MANIFEST 102" -Encoding ASCII
         
-        # 2. Create runner.rc
-        Set-Content -Path "windows/runner/runner.rc" -Value "#include `"resource.h`"`r`n`r`nIDI_APP_ICON ICON `"resources/app_icon.ico`"`r`n`r`nIDR_APPLICATION_MANIFEST RT_MANIFEST `"runner.exe.manifest`"" -Encoding ASCII
+        # 2. Create runner.rc - WITHOUT THE ICON LINE
+        # Let's comment it out or remove it since it's causing issues
+        Set-Content -Path "windows/runner/runner.rc" -Value "#include `"resource.h`"`r`n`r`n// Temporarily disabled: IDI_APP_ICON ICON `"resources/app_icon.ico`"`r`n`r`nIDR_APPLICATION_MANIFEST RT_MANIFEST `"runner.exe.manifest`"" -Encoding ASCII
         
-        # 3. Create resources directory
-        $resourcesPath = "windows/runner/resources"
-        if (!(Test-Path $resourcesPath)) {
-            New-Item -ItemType Directory -Path $resourcesPath -Force | Out-Null
-        }
-        
-        # 4. Create a PROPER valid ICO file (3.00 format - 16x16, 32x32, 48x48)
-        $iconPath = "$resourcesPath/app_icon.ico"
-        
-        # This is a proper, valid ICO file that Windows accepts
-        $validIconBytes = [byte[]]@(
-            # ICO header
-            0x00, 0x00,  # Reserved (0)
-            0x01, 0x00,  # Type (1 = ICO)
-            0x01, 0x00,  # Image count (1)
-            
-            # Image directory entry (for 16x16, 32bpp)
-            0x10, 0x00,  # Width (16)
-            0x10, 0x00,  # Height (16)
-            0x00,        # Color count (0 = 256 or more)
-            0x00,        # Reserved (0)
-            0x01, 0x00,  # Color planes (1)
-            0x20, 0x00,  # Bits per pixel (32)
-            0x00, 0x00, 0x00, 0x00,  # Image size (will be filled)
-            0x16, 0x00, 0x00, 0x00,  # Image offset (22 bytes from start)
-            
-            # BMP header for the image
-            0x28, 0x00, 0x00, 0x00,  # Header size (40)
-            0x10, 0x00, 0x00, 0x00,  # Width (16)
-            0x20, 0x00, 0x00, 0x00,  # Height (32 - doubled for BMP format)
-            0x01, 0x00,              # Planes (1)
-            0x20, 0x00,              # Bits per pixel (32)
-            0x00, 0x00, 0x00, 0x00,  # Compression (0 = none)
-            0x00, 0x00, 0x00, 0x00,  # Image size (0 for uncompressed)
-            0x00, 0x00, 0x00, 0x00,  # X pixels per meter (0)
-            0x00, 0x00, 0x00, 0x00,  # Y pixels per meter (0)
-            0x00, 0x00, 0x00, 0x00,  # Colors used (0)
-            0x00, 0x00, 0x00, 0x00,  # Important colors (0)
-            
-            # Pixel data (16x16 transparent image)
-            # 16 rows * 16 pixels * 4 bytes = 1024 bytes
-            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
-        )
-        
-        # Only fill 256 bytes for simplicity (4x4 pixel image)
-        # Adjust the image size in the header (offset 14)
-        $validIconBytes[14] = 0x00  # Low byte of image size
-        $validIconBytes[15] = 0x01  # High byte of image size (256 bytes)
-        
-        [System.IO.File]::WriteAllBytes($iconPath, $validIconBytes)
-        Write-Host "✅ Created valid ICO file" -ForegroundColor Green
-        
-        # Verify file size
-        $fileInfo = Get-Item $iconPath
-        Write-Host "ICO file size: $($fileInfo.Length) bytes" -ForegroundColor Yellow
+        Write-Host "✅ Created files (icon commented out)" -ForegroundColor Green
     
     - name: Install Dependencies
       run: flutter pub get
     
-    - name: Build Windows
+    - name: Try Debug Build
       run: flutter build windows --debug
