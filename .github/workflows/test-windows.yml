@@ -22,7 +22,7 @@ jobs:
       run: |
         Write-Host "=== Fixing Windows Build Files ===" -ForegroundColor Green
         
-        # 1. Create resource.h if missing or fix it
+        # 1. Create resource.h with correct content
         $resourceContent = @'
 #pragma once
 
@@ -52,7 +52,7 @@ IDR_APPLICATION_MANIFEST RT_MANIFEST "runner.exe.manifest"
         }
         
         if (!(Test-Path "windows/runner/resources/app_icon.ico")) {
-          # Minimal ICO file (1x1 transparent pixel)
+          # Minimal ICO file
           $iconBytes = @(
             0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x01, 
             0x00, 0x00, 0x01, 0x00, 0x08, 0x00, 0x28, 0x00, 
@@ -78,9 +78,3 @@ IDR_APPLICATION_MANIFEST RT_MANIFEST "runner.exe.manifest"
     
     - name: Build Windows
       run: flutter build windows --release
-    
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-build
-        path: build/windows/runner/Release/
