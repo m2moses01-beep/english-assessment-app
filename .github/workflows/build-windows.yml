@@ -15,7 +15,7 @@ jobs:
       uses: subosito/flutter-action@v2
     
     - name: Create Required Windows Files
-      shell: cmd  # <-- USE CMD INSTEAD OF POWERSHELL
+      shell: cmd
       run: |
         rem Create the essential files using CMD syntax
         echo #pragma once > windows\runner\resource.h
@@ -39,19 +39,25 @@ jobs:
     - name: Build Release Version
       run: flutter build windows --release
     
-    - name: Verify Release Build
+    - name: Verify Release Build (PowerShell)
+      shell: pwsh
       run: |
-        echo "=== Checking Release Build ==="
-        if [ -d "build/windows/runner/Release" ]; then
-          echo "✅ Release directory found"
-          ls -la "build/windows/runner/Release/"
-          echo "=== Executable size ==="
-          find "build/windows/runner/Release" -name "*.exe" -exec du -h {} \;
-        else
-          echo "❌ Release directory not found"
-          echo "Available directories:"
-          find "build" -type d | sort
-        fi
+        Write-Host "=== Checking Release Build ===" -ForegroundColor Cyan
+        
+        if (Test-Path "build/windows/runner/Release") {
+            Write-Host "✅ Release directory found" -ForegroundColor Green
+            Get-ChildItem -Path "build/windows/runner/Release" -Recurse | Format-Table Name, Length, LastWriteTime
+            
+            Write-Host "`n=== Executable size ===" -ForegroundColor Yellow
+            $exeFiles = Get-ChildItem -Path "build/windows/runner/Release" -Filter "*.exe" -Recurse
+            foreach ($file in $exeFiles) {
+                Write-Host "$($file.Name): $($file.Length / 1MB) MB" -ForegroundColor Cyan
+            }
+        } else {
+            Write-Host "❌ Release directory not found" -ForegroundColor Red
+            Write-Host "Available directories:" -ForegroundColor Yellow
+            Get-ChildItem -Path "build" -Recurse -Directory | Select-Object FullName
+        }
     
     - name: Upload Windows App
       uses: actions/upload-artifact@v4
