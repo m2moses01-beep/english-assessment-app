@@ -18,7 +18,29 @@ jobs:
         
     - name: Install dependencies
       run: flutter pub get
-      
+          - name: Fix Windows Files Before Build
+      run: |
+        echo "=== FIXING WINDOWS FILES ==="
+        
+        # Backup original files
+        cp windows/runner/resource.h windows/runner/resource.h.backup 2>/dev/null || true
+        
+        # Create clean resource.h WITHOUT BOM
+        cat > windows/runner/resource.h << 'EOF'
+#pragma once
+
+#define IDI_APP_ICON                    101
+#define IDR_APPLICATION_MANIFEST        102
+EOF
+        
+        echo "✅ Created clean resource.h"
+        
+        # Ensure resources directory exists
+        mkdir -p windows/runner/resources
+        
+        # Show what we've done
+        echo "Fixed files:"
+        cat windows/runner/resource.h
     - name: Test Windows build
       run: |
         echo "=== Testing Windows build ==="
@@ -27,3 +49,4 @@ jobs:
         flutter build windows --release --verbose
         echo "=== Build output ==="
         dir build\windows -Recurse -Filter *.exe 2>&1 || echo "No .exe found"
+
